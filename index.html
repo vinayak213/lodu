@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Gallery Swipe</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      overflow: hidden;
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    .header {
+      padding: 12px 20px;
+      padding-top: max(12px, env(safe-area-inset-top));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .header .counter {
+      font-size: 14px;
+      color: #888;
+      font-weight: 500;
+    }
+
+    .card-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 10px 20px;
+      overflow: hidden;
+    }
+
+    .card {
+      position: absolute;
+      width: calc(100% - 40px);
+      max-width: 400px;
+      aspect-ratio: 3 / 4;
+      max-height: calc(100% - 20px);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+      cursor: grab;
+      will-change: transform;
+      transition: none;
+      touch-action: none;
+    }
+
+    .card.animating {
+      transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+                  opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .card.behind {
+      transform: scale(0.92) translateY(12px);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .card.behind.animating {
+      transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+                  opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      -webkit-user-drag: none;
+    }
+
+    .card .overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 60px 20px 20px;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    }
+
+    .card .overlay .title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .card .overlay .subtitle {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .stamp {
+      position: absolute;
+      top: 40px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      border: 4px solid;
+      opacity: 0;
+      pointer-events: none;
+      transform: rotate(-15deg);
+    }
+
+    .stamp.like {
+      left: 24px;
+      color: #4ade80;
+      border-color: #4ade80;
+    }
+
+    .stamp.nope {
+      right: 24px;
+      color: #f87171;
+      border-color: #f87171;
+      transform: rotate(15deg);
+    }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      padding: 16px 20px;
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+
+    .action-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 2px solid;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .action-btn:active {
+      transform: scale(0.9);
+    }
+
+    .action-btn.nope {
+      border-color: #f87171;
+      color: #f87171;
+    }
+
+    .action-btn.nope:hover {
+      background: rgba(248, 113, 113, 0.15);
+    }
+
+    .action-btn.like {
+      border-color: #4ade80;
+      color: #4ade80;
+    }
+
+    .action-btn.like:hover {
+      background: rgba(74, 222, 128, 0.15);
+    }
+
+    .empty-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #666;
+    }
+
+    .empty-state.visible {
+      display: flex;
+    }
+
+    .empty-state .emoji {
+      font-size: 64px;
+    }
+
+    .empty-state p {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .empty-state button {
+      margin-top: 8px;
+      padding: 12px 28px;
+      border-radius: 24px;
+      border: none;
+      background: #fff;
+      color: #0a0a0a;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .progress-dots {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 0;
+    }
+
+    .progress-dots .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #333;
+      transition: background 0.3s;
+    }
+
+    .progress-dots .dot.active {
+      background: #fff;
+    }
+
+    .progress-dots .dot.seen {
+      background: #555;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Gallery</h1>
+    <span class="counter" id="counter"></span>
+  </div>
+
+  <div class="progress-dots" id="progressDots"></div>
+
+  <div class="card-container" id="cardContainer">
+    <div class="empty-state" id="emptyState">
+      <div class="emoji">✨</div>
+      <p>You've seen all photos!</p>
+      <button onclick="resetGallery()">Start Over</button>
+    </div>
+  </div>
+
+  <div class="actions" id="actions">
+    <button class="action-btn nope" onclick="swipeAction('left')" aria-label="Dislike">✕</button>
+    <button class="action-btn like" onclick="swipeAction('right')" aria-label="Like">♥</button>
+  </div>
+
+  <script>
+    const photos = [
+      {
+        url: 'https://picsum.photos/id/1015/800/1067',
+        title: 'River Valley',
+        subtitle: 'Yosemite, California'
+      },
+      {
+        url: 'https://picsum.photos/id/1018/800/1067',
+        title: 'Misty Mountains',
+        subtitle: 'Dolomites, Italy'
+      },
+      {
+        url: 'https://picsum.photos/id/1035/800/1067',
+        title: 'Mountain Dog',
+        subtitle: 'Swiss Alps'
+      },
+      {
+        url: 'https://picsum.photos/id/1036/800/1067',
+        title: 'Coastal Rocks',
+        subtitle: 'Big Sur, California'
+      },
+      {
+        url: 'https://picsum.photos/id/1039/800/1067',
+        title: 'Autumn Road',
+        subtitle: 'Vermont, USA'
+      },
+      {
+        url: 'https://picsum.photos/id/1041/800/1067',
+        title: 'City View',
+        subtitle: 'Manhattan, New York'
+      },
+      {
+        url: 'https://picsum.photos/id/1043/800/1067',
+        title: 'Desert Sunset',
+        subtitle: 'Sahara, Morocco'
+      },
+      {
+        url: 'https://picsum.photos/id/1047/800/1067',
+        title: 'Calm Lake',
+        subtitle: 'Banff, Canada'
+      },
+      {
+        url: 'https://picsum.photos/id/1049/800/1067',
+        title: 'Night Lights',
+        subtitle: 'Tokyo, Japan'
+      },
+      {
+        url: 'https://picsum.photos/id/1052/800/1067',
+        title: 'Golden Fields',
+        subtitle: 'Tuscany, Italy'
+      }
+    ];
+
+    let currentIndex = 0;
+    let startX = 0;
+    let startY = 0;
+    let currentX = 0;
+    let isDragging = false;
+    let activeCard = null;
+    let behindCard = null;
+
+    const container = document.getElementById('cardContainer');
+    const counterEl = document.getElementById('counter');
+    const actionsEl = document.getElementById('actions');
+    const emptyState = document.getElementById('emptyState');
+    const dotsContainer = document.getElementById('progressDots');
+
+    function createDots() {
+      dotsContainer.innerHTML = '';
+      photos.forEach((_, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'dot' + (i === 0 ? ' active' : '');
+        dotsContainer.appendChild(dot);
+      });
+    }
+
+    function updateDots() {
+      const dots = dotsContainer.querySelectorAll('.dot');
+      dots.forEach((dot, i) => {
+        dot.className = 'dot';
+        if (i === currentIndex) dot.classList.add('active');
+        else if (i < currentIndex) dot.classList.add('seen');
+      });
+    }
+
+    function updateCounter() {
+      counterEl.textContent = `${currentIndex + 1} / ${photos.length}`;
+    }
+
+    function createCard(index, isBehind) {
+      if (index >= photos.length) return null;
+      const photo = photos[index];
+      const card = document.createElement('div');
+      card.className = 'card' + (isBehind ? ' behind' : '');
+      card.innerHTML = `
+        <img src="${photo.url}" alt="${photo.title}" loading="eager">
+        <div class="overlay">
+          <div class="title">${photo.title}</div>
+          <div class="subtitle">${photo.subtitle}</div>
+        </div>
+        <div class="stamp like">LIKE</div>
+        <div class="stamp nope">NOPE</div>
+      `;
+      return card;
+    }
+
+    function renderCards() {
+      const existingCards = container.querySelectorAll('.card');
+      existingCards.forEach(c => c.remove());
+
+      if (currentIndex >= photos.length) {
+        emptyState.classList.add('visible');
+        actionsEl.style.display = 'none';
+        counterEl.textContent = '';
+        return;
+      }
+
+      emptyState.classList.remove('visible');
+      actionsEl.style.display = 'flex';
+      updateCounter();
+      updateDots();
+
+      // Behind card
+      behindCard = createCard(currentIndex + 1, true);
+      if (behindCard) container.appendChild(behindCard);
+
+      // Active card
+      activeCard = createCard(currentIndex, false);
+      if (activeCard) {
+        container.appendChild(activeCard);
+        attachTouchHandlers(activeCard);
+      }
+    }
+
+    function attachTouchHandlers(card) {
+      card.addEventListener('pointerdown', onPointerDown);
+    }
+
+    function onPointerDown(e) {
+      if (!activeCard) return;
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      currentX = 0;
+      activeCard.style.cursor = 'grabbing';
+      activeCard.classList.remove('animating');
+
+      document.addEventListener('pointermove', onPointerMove);
+      document.addEventListener('pointerup', onPointerUp);
+    }
+
+    function onPointerMove(e) {
+      if (!isDragging) return;
+      currentX = e.clientX - startX;
+      const currentY = e.clientY - startY;
+      const rotation = currentX * 0.08;
+      const absX = Math.abs(currentX);
+
+      activeCard.style.transform = `translate(${currentX}px, ${currentY * 0.3}px) rotate(${rotation}deg)`;
+
+      // Show stamps
+      const likeStamp = activeCard.querySelector('.stamp.like');
+      const nopeStamp = activeCard.querySelector('.stamp.nope');
+      const stampOpacity = Math.min(absX / 100, 1);
+
+      if (currentX > 0) {
+        likeStamp.style.opacity = stampOpacity;
+        nopeStamp.style.opacity = 0;
+      } else {
+        nopeStamp.style.opacity = stampOpacity;
+        likeStamp.style.opacity = 0;
+      }
+
+      // Animate behind card
+      if (behindCard) {
+        const progress = Math.min(absX / 150, 1);
+        const scale = 0.92 + 0.08 * progress;
+        const translateY = 12 - 12 * progress;
+        const opacity = 0.5 + 0.5 * progress;
+        behindCard.style.transform = `scale(${scale}) translateY(${translateY}px)`;
+        behindCard.style.opacity = opacity;
+      }
+    }
+
+    function onPointerUp() {
+      if (!isDragging) return;
+      isDragging = false;
+      document.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('pointerup', onPointerUp);
+
+      const threshold = 80;
+      if (Math.abs(currentX) > threshold) {
+        flyOut(currentX > 0 ? 'right' : 'left');
+      } else {
+        snapBack();
+      }
+    }
+
+    function flyOut(direction) {
+      if (!activeCard) return;
+      const flyX = direction === 'right' ? window.innerWidth : -window.innerWidth;
+      const rotation = direction === 'right' ? 30 : -30;
+
+      activeCard.classList.add('animating');
+      activeCard.style.transform = `translate(${flyX}px, 0) rotate(${rotation}deg)`;
+      activeCard.style.opacity = '0';
+
+      if (behindCard) {
+        behindCard.classList.add('animating');
+        behindCard.style.transform = 'scale(1) translateY(0)';
+        behindCard.style.opacity = '1';
+      }
+
+      setTimeout(() => {
+        currentIndex++;
+        renderCards();
+      }, 350);
+    }
+
+    function snapBack() {
+      if (!activeCard) return;
+      activeCard.classList.add('animating');
+      activeCard.style.transform = '';
+
+      const likeStamp = activeCard.querySelector('.stamp.like');
+      const nopeStamp = activeCard.querySelector('.stamp.nope');
+      likeStamp.style.opacity = 0;
+      nopeStamp.style.opacity = 0;
+
+      if (behindCard) {
+        behindCard.classList.add('animating');
+        behindCard.style.transform = 'scale(0.92) translateY(12px)';
+        behindCard.style.opacity = '0.5';
+      }
+
+      activeCard.style.cursor = 'grab';
+    }
+
+    function swipeAction(direction) {
+      if (!activeCard || currentIndex >= photos.length) return;
+      // Simulate stamp then fly out
+      const stamp = activeCard.querySelector(`.stamp.${direction === 'right' ? 'like' : 'nope'}`);
+      stamp.style.opacity = 1;
+      setTimeout(() => flyOut(direction), 150);
+    }
+
+    function resetGallery() {
+      currentIndex = 0;
+      createDots();
+      renderCards();
+    }
+
+    // Keyboard support
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') swipeAction('left');
+      if (e.key === 'ArrowRight') swipeAction('right');
+    });
+
+    // Init
+    createDots();
+    renderCards();
+  </script>
+</body>
+</html>
