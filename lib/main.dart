@@ -14,7 +14,14 @@ Future<void> main() async {
   // Load .env file (silently fail if not present)
   try {
     await dotenv.load(fileName: '.env');
-  } catch (_) {}
+  } catch (_) {
+    // .env not found — app will use dummy data
+    dotenv.testLoad(fileInput: '''
+GOOGLE_PLACES_API_KEY=
+BESTTIME_API_KEY=
+GROQ_API_KEY=
+''');
+  }
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
