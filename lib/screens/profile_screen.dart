@@ -412,7 +412,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _apiKeyRow(String name, String envKey, String desc) {
-    final isConfigured = (const String.fromEnvironment(envKey)).isNotEmpty;
+    const isConfigured = false; // Keys are loaded from .env at runtime
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
