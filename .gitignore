@@ -1,0 +1,23 @@
+# Dependencies
+/build/
+/.dart_tool/
+.packages
+.pub/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Secrets
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flutter
+**/android/local.properties
+**/android/.gradle/
+**/ios/Pods/
+**/ios/.symlinks/
