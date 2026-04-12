@@ -1,0 +1,25 @@
+```
+# Dependency directories
+.dart_tool/
+.build/
+dependencies/
+
+# Build outputs
+build/
+*.apk
+*.aab
+*.ipa
+
+# Environment variables
+.env
+.env.local
+*.env.*
+
+# Logs
+*.log
+**/logs
+
+# OS generated files
+.DS_Store
+Thumbs.db
+```

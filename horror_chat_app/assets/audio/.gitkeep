@@ -1,0 +1,14 @@
+# Audio Assets Directory
+
+Place the following audio files here:
+
+1. ambient_hum.mp3 - Low background hum (create with Audacity or download)
+2. notification.mp3 - Message notification sound
+3. glitch.mp3 - Static/glitch sound effect
+
+You can generate these sounds using:
+- Audacity (free): Generate tone/noise effects
+- Online generators: https://www.zapsplat.com/
+- Free sound libraries: https://freesound.org/
+
+For quick testing, you can use any short MP3 files as placeholders.

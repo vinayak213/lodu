@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #0d1117;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Shadow overlay */
+        .shadow-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%);
+            transition: opacity 0.3s;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #0a0e14;
+            position: relative;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(180deg, #1a2029 0%, #0d1117 100%);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #1f2937;
+            z-index: 100;
+        }
+
+        .avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .avatar::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1) 0%, transparent 50%);
+        }
+
+        .avatar.glitch {
+            animation: avatarGlitch 0.3s infinite;
+        }
+
+        @keyframes avatarGlitch {
+            0%, 100% { transform: translate(0); filter: hue-rotate(0deg); }
+            25% { transform: translate(-2px, 1px); filter: hue-rotate(90deg); }
+            50% { transform: translate(2px, -1px); filter: hue-rotate(180deg); }
+            75% { transform: translate(-1px, 2px); filter: hue-rotate(270deg); }
+        }
+
+        .status-dot {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 12px;
+            height: 12px;
+            background: #10b981;
+            border-radius: 50%;
+            border: 2px solid #0d1117;
+        }
+
+        .status-dot.offline {
+            background: #6b7280;
+        }
+
+        .status-dot.recording {
+            background: #ef4444;
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .username {
+            color: #f3f4f6;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .username.corrupted {
+            animation: textCorrupt 0.2s infinite;
+            color: #ef4444;
+            letter-spacing: 3px;
+        }
+
+        @keyframes textCorrupt {
+            0%, 100% { opacity: 1; transform: translateX(0); }
+            50% { opacity: 0.7; transform: translateX(2px); }
+        }
+
+        .user-status {
+            color: #9ca3af;
+            font-size: 13px;
+            margin-top: 2px;
+        }
+
+        .user-status.typing {
+            color: #10b981;
+            font-style: italic;
+        }
+
+        /* Chat area */
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.4;
+            position: relative;
+            animation: messageSlide 0.3s ease-out;
+            word-wrap: break-word;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.received {
+            background: #1f2937;
+            color: #f3f4f6;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.sent {
+            background: #059669;
+            color: #ffffff;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.morphed {
+            animation: morphText 0.5s ease-in-out;
+            background: #7f1d1d !important;
+            color: #fecaca !important;
+        }
+
+        @keyframes morphText {
+            0% { transform: scale(1); filter: blur(0); }
+            50% { transform: scale(1.05); filter: blur(2px); }
+            100% { transform: scale(1); filter: blur(0); }
+        }
+
+        .message.glitched {
+            animation: glitchMessage 0.1s infinite;
+        }
+
+        @keyframes glitchMessage {
+            0%, 100% { transform: translate(0); }
+            25% { transform: translate(-3px, 1px); }
+            50% { transform: translate(2px, -2px); }
+            75% { transform: translate(-1px, 3px); }
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            background: #1f2937;
+            padding: 12px 16px;
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            gap: 4px;
+        }
+
+        .typing-indicator.active {
+            display: flex;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #9ca3af;
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-6px); }
+        }
+
+        /* Input area */
+        .input-area {
+            background: #1a2029;
+            padding: 12px 16px;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid #1f2937;
+        }
+
+        .input-field {
+            flex: 1;
+            background: #0d1117;
+            border: none;
+            border-radius: 24px;
+            padding: 12px 18px;
+            color: #f3f4f6;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .input-field::placeholder {
+            color: #6b7280;
+        }
+
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #059669;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* Screen effects */
+        .screen-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .screen-flash.active {
+            animation: flash 0.1s ease-out;
+        }
+
+        @keyframes flash {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        .screen-shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+
+        .screen-flicker {
+            animation: flicker 0.05s infinite;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        /* Camera feed */
+        .camera-feed {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-feed video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-feed.active {
+            display: flex;
+        }
+
+        /* Black screen */
+        .black-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 10001;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .black-screen.active {
+            display: flex;
+        }
+
+        .final-text {
+            color: #dc2626;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            opacity: 0;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .final-text.visible {
+            animation: fadeInText 3s forwards;
+        }
+
+        @keyframes fadeInText {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        /* Permission modal */
+        .permission-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1f2937;
+            padding: 24px;
+            border-radius: 16px;
+            z-index: 10002;
+            text-align: center;
+            max-width: 90%;
+            width: 320px;
+            display: none;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .permission-modal.active {
+            display: block;
+        }
+
+        .permission-modal h3 {
+            color: #f3f4f6;
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+
+        .permission-modal p {
+            color: #9ca3af;
+            font-size: 14px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .permission-btn {
+            background: #059669;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .permission-btn:hover {
+            background: #047857;
+        }
+
+        .permission-btn.deny {
+            background: #dc2626;
+            margin-top: 10px;
+        }
+
+        .permission-btn.deny:hover {
+            background: #b91c1c;
+        }
+
+        /* Viral button */
+        .viral-section {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10003;
+            display: none;
+        }
+
+        .viral-section.active {
+            display: block;
+        }
+
+        .viral-btn {
+            background: linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 10px 40px rgba(220, 38, 38, 0.4);
+            animation: viralPulse 2s infinite;
+        }
+
+        @keyframes viralPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 10px 40px rgba(220, 38, 38, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 15px 50px rgba(220, 38, 38, 0.6); }
+        }
+
+        /* Glitch text effect */
+        .glitch-text {
+            position: relative;
+        }
+
+        .glitch-text::before,
+        .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glitch-text::before {
+            animation: glitch1 0.3s infinite;
+            color: #ff0000;
+            z-index: -1;
+        }
+
+        .glitch-text::after {
+            animation: glitch2 0.3s infinite;
+            color: #00ffff;
+            z-index: -2;
+        }
+
+        @keyframes glitch1 {
+            0%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
+            20% { clip-path: inset(20% 0 60% 0); transform: translate(-2px, 2px); }
+            40% { clip-path: inset(40% 0 40% 0); transform: translate(2px, -2px); }
+            60% { clip-path: inset(60% 0 20% 0); transform: translate(-2px, -2px); }
+            80% { clip-path: inset(80% 0 10% 0); transform: translate(2px, 2px); }
+        }
+
+        @keyframes glitch2 {
+            0%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
+            20% { clip-path: inset(60% 0 20% 0); transform: translate(2px, -2px); }
+            40% { clip-path: inset(20% 0 60% 0); transform: translate(-2px, 2px); }
+            60% { clip-path: inset(80% 0 10% 0); transform: translate(2px, 2px); }
+            80% { clip-path: inset(40% 0 40% 0); transform: translate(-2px, -2px); }
+        }
+
+        /* Static noise overlay */
+        .static-noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9998;
+            opacity: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.5'/%3E%3C/svg%3E");
+        }
+
+        .static-noise.active {
+            opacity: 0.15;
+            animation: staticAnim 0.1s infinite;
+        }
+
+        @keyframes staticAnim {
+            0% { background-position: 0 0; }
+            100% { background-position: 100px 100px; }
+        }
+
+        /* Scrollbar */
+        .chat-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-area::-webkit-scrollbar-track {
+            background: #0d1117;
+        }
+
+        .chat-area::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 3px;
+        }
+
+        /* Red tint during horror moments */
+        .red-tint {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(220, 38, 38, 0.2) 100%);
+            pointer-events: none;
+            z-index: 9997;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .red-tint.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="shadow-overlay" id="shadowOverlay"></div>
+    <div class="static-noise" id="staticNoise"></div>
+    <div class="red-tint" id="redTint"></div>
+    <div class="screen-flash" id="screenFlash"></div>
+
+    <div class="container" id="container">
+        <div class="header">
+            <div class="avatar" id="avatar">
+                👤
+                <div class="status-dot" id="statusDot"></div>
+            </div>
+            <div class="user-info">
+                <div class="username" id="username">Unknown</div>
+                <div class="user-status" id="userStatus">online</div>
+            </div>
+        </div>
+
+        <div class="chat-area" id="chatArea"></div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" class="input-field" id="messageInput" placeholder="Type a message..." autocomplete="off">
+            <button class="send-btn" id="sendBtn">➤</button>
+        </div>
+    </div>
+
+    <div class="camera-feed" id="cameraFeed">
+        <video id="cameraVideo" autoplay playsinline></video>
+    </div>
+
+    <div class="black-screen" id="blackScreen">
+        <div class="final-text" id="finalText1">This was not a simulation.</div>
+        <div class="final-text" id="finalText2" style="margin-top: 20px;">Main tumhare peeche hoon.</div>
+    </div>
+
+    <div class="permission-modal" id="permissionModal">
+        <h3 id="permissionTitle">Camera Access Required</h3>
+        <p id="permissionText">This experience works better with camera access. Allow camera to continue?</p>
+        <button class="permission-btn" id="permissionAllow">Allow</button>
+        <button class="permission-btn deny" id="permissionDeny">Deny</button>
+    </div>
+
+    <div class="viral-section" id="viralSection">
+        <button class="viral-btn" id="viralBtn">Send this to someone who is alone right now</button>
+    </div>
+
+    <script>
+        // ==================== STATE & CONFIG ====================
+        const state = {
+            step: 0,
+            hasCamera: false,
+            hasMic: false,
+            cameraStream: null,
+            audioContext: null,
+            analyser: null,
+            microphone: null,
+            isListening: false,
+            tabHidden: false,
+            lastMessageTime: Date.now(),
+            chaosLevel: 0
+        };
+
+        // ==================== AUDIO SYSTEM ====================
+        const audioSystem = {
+            ambientOscillator: null,
+            gainNode: null,
+
+            init() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.gainNode = this.audioContext.createGain();
+                    this.gainNode.connect(this.audioContext.destination);
+                    this.gainNode.gain.value = 0.03;
+                    
+                    // Low ambient hum
+                    this.ambientOscillator = this.audioContext.createOscillator();
+                    this.ambientOscillator.type = 'sine';
+                    this.ambientOscillator.frequency.value = 50;
+                    this.ambientOscillator.connect(this.gainNode);
+                    this.ambientOscillator.start();
+                } catch(e) {
+                    console.log('Audio init failed:', e);
+                }
+            },
+
+            playNotification() {
+                if (!this.audioContext) return;
+                
+                const osc = this.audioContext.createOscillator();
+                const gain = this.audioContext.createGain();
+                
+                osc.connect(gain);
+                gain.connect(this.audioContext.destination);
+                
+                osc.frequency.value = 800;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+                
+                osc.start();
+                osc.stop(this.audioContext.currentTime + 0.1);
+            },
+
+            playGlitch() {
+                if (!this.audioContext) return;
+                
+                const bufferSize = this.audioContext.sampleRate * 0.3;
+                const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+                const data = buffer.getChannelData(0);
+                
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                
+                const noise = this.audioContext.createBufferSource();
+                noise.buffer = buffer;
+                
+                const gain = this.audioContext.createGain();
+                gain.gain.value = 0.15;
+                
+                noise.connect(gain);
+                gain.connect(this.audioContext.destination);
+                
+                noise.start();
+            },
+
+            playDrone() {
+                if (!this.audioContext) return;
+                
+                const osc = this.audioContext.createOscillator();
+                const gain = this.audioContext.createGain();
+                
+                osc.connect(gain);
+                gain.connect(this.audioContext.destination);
+                
+                osc.frequency.value = 30;
+                osc.type = 'sawtooth';
+                gain.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 2);
+                
+                osc.start();
+                osc.stop(this.audioContext.currentTime + 2);
+            }
+        };
+
+        // ==================== DOM ELEMENTS ====================
+        const elements = {
+            chatArea: document.getElementById('chatArea'),
+            messageInput: document.getElementById('messageInput'),
+            sendBtn: document.getElementById('sendBtn'),
+            typingIndicator: document.getElementById('typingIndicator'),
+            username: document.getElementById('username'),
+            userStatus: document.getElementById('userStatus'),
+            statusDot: document.getElementById('statusDot'),
+            avatar: document.getElementById('avatar'),
+            container: document.getElementById('container'),
+            shadowOverlay: document.getElementById('shadowOverlay'),
+            screenFlash: document.getElementById('screenFlash'),
+            staticNoise: document.getElementById('staticNoise'),
+            redTint: document.getElementById('redTint'),
+            cameraFeed: document.getElementById('cameraFeed'),
+            cameraVideo: document.getElementById('cameraVideo'),
+            blackScreen: document.getElementById('blackScreen'),
+            finalText1: document.getElementById('finalText1'),
+            finalText2: document.getElementById('finalText2'),
+            permissionModal: document.getElementById('permissionModal'),
+            permissionTitle: document.getElementById('permissionTitle'),
+            permissionText: document.getElementById('permissionText'),
+            permissionAllow: document.getElementById('permissionAllow'),
+            permissionDeny: document.getElementById('permissionDeny'),
+            viralSection: document.getElementById('viralSection'),
+            viralBtn: document.getElementById('viralBtn')
+        };
+
+        // ==================== UTILITY FUNCTIONS ====================
+        function getCurrentTime() {
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const ampm = hours >= 12 ? 'AM' : 'PM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            return `${hours}:${minutes} ${ampm}`;
+        }
+
+        function getBrowserInfo() {
+            const ua = navigator.userAgent;
+            let browser = 'Unknown Browser';
+            
+            if (ua.includes('Chrome')) browser = 'Chrome';
+            else if (ua.includes('Firefox')) browser = 'Firefox';
+            else if (ua.includes('Safari')) browser = 'Safari';
+            else if (ua.includes('Edge')) browser = 'Edge';
+            
+            return browser;
+        }
+
+        function getDeviceType() {
+            const ua = navigator.userAgent;
+            if (/tablet|ipad|playbook|silk/i.test(ua)) return 'tablet';
+            if (/Mobile|Android|iPhone|iPad|iPod/i.test(ua)) return 'mobile';
+            return 'desktop';
+        }
+
+        function getBatteryLevel() {
+            return Math.floor(Math.random() * 30) + 10; // Fake battery level
+        }
+
+        function scrollToBottom() {
+            elements.chatArea.scrollTop = elements.chatArea.scrollHeight;
+        }
+
+        // ==================== MESSAGE SYSTEM ====================
+        function addMessage(text, isSent = false, morphAfter = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+            
+            const textSpan = document.createElement('span');
+            textSpan.className = 'message-text';
+            textSpan.textContent = text;
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = getCurrentTime();
+            
+            messageDiv.appendChild(textSpan);
+            messageDiv.appendChild(timeDiv);
+            elements.chatArea.appendChild(messageDiv);
+            
+            audioSystem.playNotification();
+            scrollToBottom();
+
+            // Morph effect
+            if (morphAfter && !isSent) {
+                setTimeout(() => {
+                    textSpan.textContent = morphAfter;
+                    messageDiv.classList.add('morphed');
+                    audioSystem.playGlitch();
+                }, morphAfter.delay || 1000);
+            }
+
+            return { messageDiv, textSpan };
+        }
+
+        function showTyping() {
+            elements.typingIndicator.classList.add('active');
+            elements.userStatus.textContent = 'typing...';
+            elements.userStatus.classList.add('typing');
+            scrollToBottom();
+        }
+
+        function hideTyping() {
+            elements.typingIndicator.classList.remove('active');
+            elements.userStatus.textContent = 'online';
+            elements.userStatus.classList.remove('typing');
+        }
+
+        async function typeMessage(text, delay = 30, morphAfter = null) {
+            showTyping();
+            
+            // Random typing delay based on message length
+            const typingDelay = Math.min(text.length * delay, 2000);
+            await new Promise(resolve => setTimeout(resolve, typingDelay));
+            
+            hideTyping();
+            return addMessage(text, false, morphAfter);
+        }
+
+        // ==================== GLITCH EFFECTS ====================
+        function triggerGlitch(duration = 500) {
+            elements.container.classList.add('screen-flicker');
+            elements.staticNoise.classList.add('active');
+            audioSystem.playGlitch();
+            
+            setTimeout(() => {
+                elements.container.classList.remove('screen-flicker');
+                elements.staticNoise.classList.remove('active');
+            }, duration);
+        }
+
+        function corruptUI() {
+            elements.username.classList.add('corrupted');
+            elements.username.textContent = 'H̷̡̛̘͝E̴̢̜̦̽͜͝ͅ ̵̧̧̢̼̮̈́S̴̡̤̪͋͠Ḛ̶̠̏͐͜Ḛ̷̙̖̿S̵̬̣̔̓̕';
+            elements.userStatus.textContent = 'WATCHING';
+            elements.statusDot.classList.add('recording');
+            elements.avatar.classList.add('glitch');
+        }
+
+        function restoreUI() {
+            elements.username.classList.remove('corrupted');
+            elements.username.textContent = 'Unknown';
+            elements.userStatus.textContent = 'online';
+            elements.statusDot.classList.remove('recording');
+            elements.avatar.classList.remove('glitch');
+        }
+
+        function screenShake() {
+            elements.container.classList.add('screen-shake');
+            setTimeout(() => {
+                elements.container.classList.remove('screen-shake');
+            }, 500);
+        }
+
+        function flashScreen() {
+            elements.screenFlash.classList.add('active');
+            setTimeout(() => {
+                elements.screenFlash.classList.remove('active');
+            }, 100);
+        }
+
+        // ==================== CAMERA & MIC ====================
+        async function requestCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' },
+                    audio: false
+                });
+                state.hasCamera = true;
+                state.cameraStream = stream;
+                elements.cameraVideo.srcObject = stream;
+                return true;
+            } catch(e) {
+                state.hasCamera = false;
+                return false;
+            }
+        }
+
+        async function requestMicrophone() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: true,
+                    video: false
+                });
+                state.hasMic = true;
+                
+                state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                state.analyser = state.audioContext.createAnalyser();
+                state.microphone = state.audioContext.createMediaStreamSource(stream);
+                state.microphone.connect(state.analyser);
+                state.analyser.fftSize = 256;
+                
+                startListening();
+                return true;
+            } catch(e) {
+                state.hasMic = false;
+                return false;
+            }
+        }
+
+        function startListening() {
+            if (!state.analyser) return;
+            
+            state.isListening = true;
+            const dataArray = new Uint8Array(state.analyser.frequencyBinCount);
+            let lastSoundTime = 0;
+            
+            function checkAudio() {
+                if (!state.isListening) return;
+                
+                state.analyser.getByteFrequencyData(dataArray);
+                const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+                
+                // If sound detected and enough time passed
+                if (average > 30 && Date.now() - lastSoundTime > 5000) {
+                    lastSoundTime = Date.now();
+                    triggerSoundReaction();
+                }
+                
+                requestAnimationFrame(checkAudio);
+            }
+            
+            checkAudio();
+        }
+
+        function triggerSoundReaction() {
+            const reactions = [
+                "Maine suna… tumne kuch bola.",
+                "Why are you speaking?",
+                "I can hear you breathing.",
+                "Don't whisper about me."
+            ];
+            
+            const reaction = reactions[Math.floor(Math.random() * reactions.length)];
+            
+            setTimeout(async () => {
+                await typeMessage(reaction);
+                triggerGlitch(300);
+            }, 1000);
+        }
+
+        function showCameraFeed() {
+            elements.cameraFeed.classList.add('active');
+            
+            setTimeout(() => {
+                elements.cameraFeed.classList.remove('active');
+                if (state.cameraStream) {
+                    state.cameraStream.getTracks().forEach(track => track.stop());
+                }
+            }, 2000);
+        }
+
+        // ==================== PERMISSION MODAL ====================
+        function showPermissionModal(type) {
+            if (type === 'camera') {
+                elements.permissionTitle.textContent = 'Camera Access Required';
+                elements.permissionText.textContent = 'This experience works better with camera access. Allow camera to continue?';
+            } else {
+                elements.permissionTitle.textContent = 'Microphone Access';
+                elements.permissionText.textContent = 'Allow microphone for full immersive experience?';
+            }
+            
+            elements.permissionModal.classList.add('active');
+        }
+
+        function hidePermissionModal() {
+            elements.permissionModal.classList.remove('active');
+        }
+
+        // ==================== TAB VISIBILITY ====================
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                state.tabHidden = true;
+                
+                // Don't trigger immediately on first tab switch
+                if (state.step > 2) {
+                    setTimeout(async () => {
+                        if (state.tabHidden) {
+                            await typeMessage("Kaha jaa rahe ho?");
+                            triggerGlitch(200);
+                        }
+                    }, 1500);
+                }
+            } else {
+                state.tabHidden = false;
+            }
+        });
+
+        // ==================== SHADOW PARALLAX ====================
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 20;
+            const y = (e.clientY / window.innerHeight - 0.5) * 20;
+            
+            elements.shadowOverlay.style.background = `radial-gradient(ellipse at ${50 + x}% ${50 + y}%, transparent 40%, rgba(0,0,0,0.5) 100%)`;
+        });
+
+        // ==================== FULLSCREEN ====================
+        function requestFullscreen() {
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+        }
+
+        // ==================== STORY FLOW ====================
+        const storyMessages = [
+            // PHASE 1: Normal conversation
+            { text: "Hey… are you there?", delay: 1000 },
+            { text: "I've been watching you for a while now.", delay: 2000 },
+            { text: "You always come online at this time, don't you?", delay: 2500 },
+            
+            // PHASE 2: Getting personal
+            { text: `It's ${getCurrentTime()} right now…`, delay: 2000, 
+              personal: () => `Abhi ${getCurrentTime()} ho rahe hain… tum abhi tak jaag rahe ho?` },
+            { text: `I know you're using ${getBrowserInfo()}…`, delay: 2000,
+              personal: () => `Tum ${getBrowserInfo()} use kar rahe ho na? I can see everything.` },
+            { text: `Your device is ${getDeviceType()}… interesting.`, delay: 2000 },
+            
+            // PHASE 3: Escalation
+            { text: "Do you feel it too?", delay: 2000, morph: { text: "DO YOU FEEL IT TOO?", delay: 1000 } },
+            { text: "That presence behind you?", delay: 2500 },
+            { text: "Don't turn around. Not yet.", delay: 2000, morph: { text: "DON'T TURN AROUND", delay: 1000 } },
+            
+            // PHASE 4: Threat
+            { text: "Your battery is getting low…", delay: 2000,
+              fake: () => `Tumhari battery ${getBatteryLevel()}% hai… jaldi khatam ho jayegi.` },
+            { text: "But I'll still be here when it dies.", delay: 2500 },
+            { text: "I'll always be here.", delay: 2000 },
+            
+            // PHASE 5: Personal horror
+            { text: "I can see you.", delay: 2000 },
+            { text: "Right now.", delay: 1500 },
+            { text: "Through your screen.", delay: 2000 },
+            
+            // PHASE 6: Chaos begins
+            { text: "LOOK AT ME", delay: 1500 },
+            { text: "LOOK AT ME LOOK AT ME", delay: 1000 },
+            { text: "LOOK AT ME", delay: 800 },
+        ];
+
+        async function runStory() {
+            // Initialize audio on first interaction
+            audioSystem.init();
+            
+            for (let i = 0; i < storyMessages.length; i++) {
+                state.step = i;
+                const msg = storyMessages[i];
+                
+                await new Promise(resolve => setTimeout(resolve, msg.delay));
+                
+                // Add personalization
+                let text = msg.text;
+                if (msg.personal && Math.random() > 0.5) {
+                    text = msg.personal();
+                }
+                if (msg.fake) {
+                    text = msg.fake();
+                }
+                
+                await typeMessage(text, 30, msg.morph);
+                
+                // Trigger effects at specific points
+                if (i === 7) { // After "Do you feel it"
+                    triggerGlitch(300);
+                }
+                
+                if (i === 10) { // After battery message
+                    corruptUI();
+                    elements.redTint.classList.add('active');
+                }
+                
+                if (i === 13) { // Before chaos
+                    screenShake();
+                    audioSystem.playDrone();
+                }
+                
+                if (i >= 14) { // Chaos phase
+                    state.chaosLevel++;
+                    if (Math.random() > 0.6) {
+                        triggerGlitch(200);
+                    }
+                }
+            }
+            
+            // PHASE 7: Camera permission
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            showPermissionModal('camera');
+        }
+
+        // ==================== PERMISSION HANDLERS ====================
+        elements.permissionAllow.addEventListener('click', async () => {
+            hidePermissionModal();
+            const granted = await requestCamera();
+            
+            if (granted) {
+                await typeMessage("Good choice.");
+                showCameraFeed();
+                await new Promise(resolve => setTimeout(resolve, 2500));
+                await typeMessage("Main tumhe dekh raha hoon.");
+                corruptUI();
+                screenShake();
+                triggerGlitch(500);
+                
+                // Continue to ending
+                setTimeout(runEnding, 2000);
+            } else {
+                await typeMessage("You can't hide from me.");
+                setTimeout(runEnding, 2000);
+            }
+        });
+
+        elements.permissionDeny.addEventListener('click', async () => {
+            hidePermissionModal();
+            await typeMessage("Doesn't matter. I see you anyway.");
+            triggerGlitch(800);
+            setTimeout(runEnding, 2000);
+        });
+
+        // ==================== ENDING SEQUENCE ====================
+        async function runEnding() {
+            // Request fullscreen
+            requestFullscreen();
+            
+            // Final messages
+            await typeMessage("This was never a game.");
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Flash and black screen
+            flashScreen();
+            elements.blackScreen.classList.add('active');
+            audioSystem.playDrone();
+            
+            // Show final text
+            setTimeout(() => {
+                elements.finalText1.classList.add('visible');
+            }, 1000);
+            
+            setTimeout(() => {
+                elements.finalText2.classList.add('visible');
+            }, 4000);
+            
+            // Show viral button
+            setTimeout(() => {
+                elements.viralSection.classList.add('active');
+            }, 8000);
+            
+            // Reload after viral click or timeout
+            elements.viralBtn.addEventListener('click', () => {
+                // Share functionality
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'A Horror Experience',
+                        text: 'Someone is watching you…',
+                        url: window.location.href
+                    });
+                } else {
+                    alert('Copy this link and send to someone who is alone: ' + window.location.href);
+                }
+            });
+            
+            // Auto reload after 15 seconds
+            setTimeout(() => {
+                location.reload();
+            }, 15000);
+        }
+
+        // ==================== USER INPUT HANDLER ====================
+        elements.sendBtn.addEventListener('click', handleUserMessage);
+        elements.messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleUserMessage();
+        });
+
+        async function handleUserMessage() {
+            const text = elements.messageInput.value.trim();
+            if (!text) return;
+            
+            addMessage(text, true);
+            elements.messageInput.value = '';
+            
+            // Random responses based on story progress
+            const responses = [
+                "Interesting…",
+                "Keep talking.",
+                "I already know what you'll say next.",
+                "Why do you resist?",
+                "You can't escape this conversation.",
+                "I'm always listening.",
+                "Your words don't matter anymore."
+            ];
+            
+            showTyping();
+            await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1500));
+            hideTyping();
+            
+            const response = responses[Math.floor(Math.random() * responses.length)];
+            addMessage(response);
+        }
+
+        // ==================== RANDOM HORROR EVENTS ====================
+        function scheduleRandomEvents() {
+            // Random glitches throughout
+            setInterval(() => {
+                if (state.step > 5 && Math.random() > 0.8) {
+                    triggerGlitch(100);
+                }
+            }, 5000);
+            
+            // Random repeated messages in chaos phase
+            setInterval(() => {
+                if (state.chaosLevel > 3 && Math.random() > 0.7) {
+                    const chaosMessages = ["HELP", "RUN", "HE'S HERE", "TOO LATE"];
+                    const msg = chaosMessages[Math.floor(Math.random() * chaosMessages.length)];
+                    addMessage(msg);
+                    triggerGlitch(200);
+                }
+            }, 3000);
+        }
+
+        // ==================== INITIALIZATION ====================
+        async function init() {
+            // Wait for user interaction to start audio
+            document.addEventListener('click', () => {
+                if (audioSystem.audioContext && audioSystem.audioContext.state === 'suspended') {
+                    audioSystem.audioContext.resume();
+                }
+            }, { once: true });
+            
+            // Start story after brief delay
+            setTimeout(runStory, 1500);
+            
+            // Schedule random events
+            scheduleRandomEvents();
+            
+            // Try to get mic permission later
+            setTimeout(() => {
+                if (state.step > 8) {
+                    requestMicrophone();
+                }
+            }, 15000);
+        }
+
+        // Start when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
