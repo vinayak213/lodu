@@ -1,0 +1,44 @@
+name: horror_chat_app
+description: A psychological horror chat simulation experience
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Camera for horror reveal
+  camera: ^0.10.5
+  
+  # Audio playback for ambient sounds and effects
+  audioplayers: ^5.2.1
+  
+  # Vibration/haptic feedback
+  vibration: ^1.8.4
+  
+  # Flashlight/torch control
+  torch_light: ^1.1.0
+  
+  # Permissions handling
+  permission_handler: ^11.1.0
+  
+  # Share functionality
+  share_plus: ^7.2.1
+  
+  # Device info
+  device_info_plus: ^9.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/audio/
+    - assets/images/
